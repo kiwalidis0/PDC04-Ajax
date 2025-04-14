@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+  <meta charset="UTF-8">
+  <title>Address Form</title>
+
+  <!-- Enable dark mode -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class'
+    };
+  </script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-black dark:text-white flex justify-center items-center min-h-screen transition-colors duration-300">
+
+  <!-- Toggle dark mode-->
+  <button id="toggleTheme" class="fixed top-4 right-4 p-2 text-xl bg-gray-700 dark:bg-gray-700 rounded-full shadow hover:bg-gray-300 dark:hover:bg-gray-600 transition">
+    🌙
+  </button>  
+
+  <!-- Form -->
+  <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-md w-full max-w-md transition-colors duration-300">
+    <h2 class="text-2xl font-bold mb-6 text-center">Address Form</h2>
+
+    <form id="locationForm" class="space-y-4">
+      <input type="text" name="firstname" placeholder="First Name" class="w-full p-2 border rounded-xl bg-white dark:bg-gray-700 dark:text-white" required>
+      <input type="text" name="lastname" placeholder="Last Name" class="w-full p-2 border rounded-xl bg-white dark:bg-gray-700 dark:text-white" required>
+
+      <select id="region" name="region" class="w-full p-2 border rounded-xl bg-white dark:bg-gray-700 dark:text-white" required>
+        <option value="">Select Region</option>
+      </select>
+
+      <select id="province" name="province" class="w-full p-2 border rounded-xl bg-white dark:bg-gray-700 dark:text-white" required>
+        <option value="">Select Province</option>
+      </select>
+
+      <select id="city" name="city" class="w-full p-2 border rounded-xl bg-white dark:bg-gray-700 dark:text-white" required>
+        <option value="">Select City/Municipality</option>
+      </select>
+
+      <select id="barangay" name="barangay" class="w-full p-2 border rounded-xl bg-white dark:bg-gray-700 dark:text-white" required>
+        <option value="">Select Barangay</option>
+      </select>
+
+      <button type="submit" class="bg-blue-500 text-white w-full py-2 rounded-xl hover:bg-blue-600 transition">Submit</button>
+    </form>
+
+    <!-- Swap the user input here -->
+    <div id="result" class="mt-4 text-center text-lg font-medium text-green-800 dark:text-green-400"></div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      fetchOptions("region");
+
+      document.getElementById("region").addEventListener("change", function () {
+        fetchOptions("province", this.value);
+        clearBelow("province");
+      });
+
+      document.getElementById("province").addEventListener("change", function () {
+        fetchOptions("city", this.value);
+        clearBelow("city");
+      });
+
+      document.getElementById("city").addEventListener("change", function () {
+        fetchOptions("barangay", this.value);
+      });
+
+      document.getElementById("locationForm").addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const firstname = this.firstname.value;
+        const lastname = this.lastname.value;
+        const region = this.region.options[this.region.selectedIndex].text;
+        const province = this.province.options[this.province.selectedIndex].text;
+        const city = this.city.options[this.city.selectedIndex].text;
+        const barangay = this.barangay.options[this.barangay.selectedIndex].text;
+
+        document.getElementById("result").textContent =
+          `Hello ${firstname} ${lastname}, you live at ${barangay}, ${city}, ${province}, ${region}, Philippines.`;
+
+        this.reset();
+        clearBelow("region");
+      });
+
+      const themeBtn = document.getElementById("toggleTheme");
+
+      themeBtn.addEventListener("click", () => {
+        document.documentElement.classList.toggle("dark");
+        updateThemeIcon();
+      });
+
+      function updateThemeIcon() {
+        themeBtn.textContent = document.documentElement.classList.contains("dark") ? "☀️" : "🌙";
+      }
+
+      updateThemeIcon();
+    });
+
+    function fetchOptions(type, parentId = null) {
+      let url = `PH/main.php?type=${type}`;
+      if (parentId) url += `&parent_id=${parentId}`;
+
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          const select = document.getElementById(type);
+          select.innerHTML = `<option value="">Select ${type.charAt(0).toUpperCase() + type.slice(1)}</option>`;
+          data.forEach(item => {
+            select.innerHTML += `<option value="${item.id}">${item.name}</option>`;
+          });
+        });
+    }
+
+    function clearBelow(start) {
+      const order = ["region", "province", "city", "barangay"];
+      const i = order.indexOf(start);
+      for (let j = i + 1; j < order.length; j++) {
+        document.getElementById(order[j]).innerHTML = `<option value="">Select ${order[j]}</option>`;
+      }
+    }
+  </script>
+</body>
+</html>
