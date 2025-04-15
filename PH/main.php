@@ -1,66 +1,80 @@
 <?php
 header('Content-Type: application/json');
 
-// Getting the request type (region/province/city/barangay) and optional parent ID
-$type = $_GET['type'] ?? null;
-$parentId = $_GET['parent_id'] ?? null;
+// getting the values from the URL (type and parent_id if any)
+$type = isset($_GET['type']) ? $_GET['type'] : null;
+$parentId = isset($_GET['parent_id']) ? $_GET['parent_id'] : null;
 
-// Map each type to its corresponding JSON file
-$basePath = __DIR__ . '/json/';
-$fileMap = [
+$folderPath = __DIR__ . '/json/';
+
+// matching the type to the correct file names
+$fileNames = [
     'region' => 'table_region.json',
     'province' => 'table_province.json',
     'city' => 'table_municipality.json',
     'barangay' => 'table_barangay.json'
 ];
 
-// This will stop if the request type is invalid
-if (!isset($fileMap[$type])) {
-    echo json_encode(['error' => 'Invalid type']);
+// checking if the type is valid or invalid (e.g., region, province, etc.)
+if (!isset($fileNames[$type])) {
+    echo json_encode(['error' => 'Invalid type requested']);
     exit;
 }
 
-// Checking if the corresponding JSON file exists
-$filePath = $basePath . $fileMap[$type];
+// the full path for the selected dropdown type
+$filePath = $folderPath . $fileNames[$type];
+
+// making sure the file exists
 if (!file_exists($filePath)) {
-    echo json_encode(['error' => 'File not found']);
+    echo json_encode(['error' => 'Data file not found']);
     exit;
 }
 
-// Load and decode the JSON data
+// reading the JSON file and turning it into an array
 $data = json_decode(file_get_contents($filePath), true);
 
+// If a parent ID goes through, this will filter the data
 if ($parentId) {
     $data = array_filter($data, function ($item) use ($type, $parentId) {
-        if ($type === 'province') return $item['region_id'] == $parentId;
-        if ($type === 'city') return $item['province_id'] == $parentId;
-        if ($type === 'barangay') return $item['municipality_id'] == $parentId;
+        if ($type === 'province') {
+            return $item['region_id'] == $parentId;
+        } elseif ($type === 'city') {
+            return $item['province_id'] == $parentId;
+        } elseif ($type === 'barangay') {
+            return $item['municipality_id'] == $parentId;
+        }
         return true;
     });
+
     $data = array_values($data);
 }
 
-// Always return the ID and Name
-$normalized = [];
+// sending back the list of options 
+$result = [];
+
 foreach ($data as $item) {
-    if ($type === 'city') {
-        $id = $item['municipality_id'] ?? null;
-        $name = $item['municipality_name'] ?? null;
-    } elseif ($type === 'barangay') {
-        $id = $item['barangay_id'] ?? null;
-        $name = $item['barangay_name'] ?? null;
+    if ($type === 'region') {
+        $id = $item['region_id'];
+        $name = $item['region_name'];
     } elseif ($type === 'province') {
-        $id = $item['province_id'] ?? null;
-        $name = $item['province_name'] ?? null;
-    } else { // region
-        $id = $item['region_id'] ?? null;
-        $name = $item['region_name'] ?? null;
+        $id = $item['province_id'];
+        $name = $item['province_name'];
+    } elseif ($type === 'city') {
+        $id = $item['municipality_id'];
+        $name = $item['municipality_name'];
+    } elseif ($type === 'barangay') {
+        $id = $item['barangay_id'];
+        $name = $item['barangay_name'];
     }
 
+    // this verifies that both id and name exists before adding them
     if ($id && $name) {
-        $normalized[] = ['id' => $id, 'name' => $name];
+        $result[] = [
+            'id' => $id,
+            'name' => $name
+        ];
     }
 }
 
-// Send final JSON response
-echo json_encode($normalized);
+// returns it in json format
+echo json_encode($result);
